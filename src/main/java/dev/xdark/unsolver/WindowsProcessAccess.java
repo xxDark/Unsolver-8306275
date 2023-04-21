@@ -24,7 +24,7 @@ final class WindowsProcessAccess implements ProcessAccess {
 	@Override
 	public boolean is64Bit(Object handle) {
 		IntByReference ref = new IntByReference();
-		Util.checkTrue(Kernel32.INSTANCE.IsWow64Process((WinNT.HANDLE) handle, ref), "IsWow64Process this");
+		Util.checkTrue(Kernel32.INSTANCE.IsWow64Process((WinNT.HANDLE) handle, ref), "IsWow64Process");
 		return ref.getValue() == 0;
 	}
 
