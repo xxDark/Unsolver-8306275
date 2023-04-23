@@ -131,8 +131,6 @@ final class LinuxProcessAccess implements ProcessAccess {
 		int process_vm_readv(int pid, iovec[] local_iov, int liovcnt, iovec[] remote_iov, int riovcnt, long flags);
 
 		int process_vm_writev(int pid, iovec[] local_iov, int liovcnt, iovec[] remote_iov, int riovcnt, long flags);
-
-		int errno();
 	}
 
 	private static final class NativeLib {

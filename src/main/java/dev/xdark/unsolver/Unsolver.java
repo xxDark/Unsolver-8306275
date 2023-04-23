@@ -12,10 +12,6 @@ public final class Unsolver {
 	private Unsolver() {
 	}
 
-	public static void main(String[] args) {
-		enableDynamicAgentLoading(3470);
-	}
-
 	public static void enableDynamicAgentLoading(long pid) {
 		ProcessAccess access;
 		if (System.getProperty("os.name").toLowerCase(Locale.US).contains("win")) {
