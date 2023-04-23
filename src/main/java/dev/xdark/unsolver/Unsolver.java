@@ -14,8 +14,9 @@ public final class Unsolver {
 	public static void enableDynamicAgentLoading(long pid) {
 		ProcessAccess access = new WindowsProcessAccess();
 		Object targetProcess = access.openProcess(pid);
+		Object jvm = null;
 		try {
-			Object jvm = Util.checkNotNull(access.findLibJvm(targetProcess), "libjvm");
+			jvm = Util.checkNotNull(access.findLibJvm(targetProcess), "libjvm");
 			boolean is64bit = access.is64Bit(targetProcess);
 			int targetSize = is64bit ? 8 : 4;
 			SymbolLookup lookup = new SymbolLookup(access, jvm, is64bit);
@@ -107,6 +108,9 @@ public final class Unsolver {
 				}
 			}
 		} finally {
+			if (jvm != null) {
+				access.closeLibJvm(jvm);
+			}
 			access.closeProcess(targetProcess);
 		}
 		throw new IllegalStateException("Could not change EnableDynamicAgentLoading flag");

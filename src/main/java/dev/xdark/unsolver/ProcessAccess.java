@@ -12,6 +12,8 @@ public interface ProcessAccess {
 
 	Object findLibJvm(Object process);
 
+	void closeLibJvm(Object module);
+
 	Pointer getProcAddress(Object module, String name);
 
 	int readProcessMemory(Object process, Pointer base, Pointer dst, int size);

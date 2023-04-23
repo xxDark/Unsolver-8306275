@@ -58,6 +58,11 @@ final class WindowsProcessAccess implements ProcessAccess {
 	}
 
 	@Override
+	public void closeLibJvm(Object module) {
+		// Do nothing
+	}
+
+	@Override
 	public Pointer getProcAddress(Object module, String name) {
 		WinDef.LPVOID address = Kernel32Ext.INSTANCE.GetProcAddress((WinDef.HMODULE) module, name);
 		return address == null ? null : address.getPointer();
