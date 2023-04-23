@@ -69,10 +69,10 @@ final class WindowsProcessAccess implements ProcessAccess {
 	}
 
 	@Override
-	public int readProcessMemory(Object process, Pointer base, Pointer dst, int size) {
+	public int readProcessMemory(Object process, Pointer src, Pointer dst, int size) {
 		IntByReference read = new IntByReference();
 		Util.checkTrue(
-				Kernel32.INSTANCE.ReadProcessMemory((WinNT.HANDLE) process, base, dst, size, read),
+				Kernel32.INSTANCE.ReadProcessMemory((WinNT.HANDLE) process, src, dst, size, read),
 				"ReadProcessMemory"
 		);
 		return read.getValue();

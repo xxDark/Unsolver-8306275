@@ -9,7 +9,19 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    shade
+    implementation.extendsFrom shade
+}
+
 dependencies {
-    implementation 'net.java.dev.jna:jna:5.13.0'
-    implementation 'net.java.dev.jna:jna-platform:5.13.0'
+    shade 'net.java.dev.jna:jna:5.13.0'
+    shade 'net.java.dev.jna:jna-platform:5.13.0'
+}
+
+jar {
+    from {
+        duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+        configurations.shade.collect { zipTree it }
+    }
 }

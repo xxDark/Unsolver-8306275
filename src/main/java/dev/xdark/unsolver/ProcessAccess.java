@@ -16,7 +16,7 @@ public interface ProcessAccess {
 
 	Pointer getProcAddress(Object module, String name);
 
-	int readProcessMemory(Object process, Pointer base, Pointer dst, int size);
+	int readProcessMemory(Object process, Pointer src, Pointer dst, int size);
 
 	int writeProcessMemory(Object process, Pointer dst, Pointer src, int size);
 }

@@ -5,21 +5,32 @@ import com.sun.jna.Pointer;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public final class Unsolver {
 	private Unsolver() {
 	}
 
+	public static void main(String[] args) {
+		enableDynamicAgentLoading(3470);
+	}
+
 	public static void enableDynamicAgentLoading(long pid) {
-		ProcessAccess access = new WindowsProcessAccess();
+		ProcessAccess access;
+		if (System.getProperty("os.name").toLowerCase(Locale.US).contains("win")) {
+			access = new WindowsProcessAccess();
+		} else {
+			access = new LinuxProcessAccess();
+		}
 		Object targetProcess = access.openProcess(pid);
+		Util.checkNotNull(targetProcess, "openProcess failed");
 		Object jvm = null;
 		try {
 			jvm = Util.checkNotNull(access.findLibJvm(targetProcess), "libjvm");
 			boolean is64bit = access.is64Bit(targetProcess);
 			int targetSize = is64bit ? 8 : 4;
-			SymbolLookup lookup = new SymbolLookup(access, jvm, is64bit);
+			SymbolLookup lookup = new SymbolLookup(access, targetProcess, jvm, is64bit);
 
 			Map<String, Map<String, Field>> map = new HashMap<>();
 			{
@@ -93,8 +104,10 @@ public final class Unsolver {
 
 						for (int k = 0; k < flagCount - 1; k++) {
 							Pointer flagAddress = baseFlagAddress.share((long) k * size);
-							int bytesRead = access.readProcessMemory(targetProcess, flagAddress.share(_name), memory, 1024);
-							String flagName = readStringA(readPointer(memory, targetSize), bytesRead);
+							access.readProcessMemory(targetProcess, flagAddress.share(_name), memory, targetSize);
+							Pointer pointer = readPointer(memory, targetSize);
+							access.readProcessMemory(targetProcess, pointer, memory, 1024);
+							String flagName = readStringA(memory, 1024);
 							if ("EnableDynamicAgentLoading".equals(flagName)) {
 								access.readProcessMemory(targetProcess, flagAddress.share(_addr), memory, targetSize);
 								Pointer valueAddress = readPointer(memory, targetSize);
@@ -111,7 +124,9 @@ public final class Unsolver {
 			if (jvm != null) {
 				access.closeLibJvm(jvm);
 			}
-			access.closeProcess(targetProcess);
+			if (targetProcess != null) {
+				access.closeProcess(targetProcess);
+			}
 		}
 		throw new IllegalStateException("Could not change EnableDynamicAgentLoading flag");
 	}
@@ -209,17 +224,23 @@ public final class Unsolver {
 
 		final ProcessAccess access;
 		final Object module;
+		final Object process;
 		final boolean is64bit;
+		private final Memory tmp;
 
-		SymbolLookup(ProcessAccess access, Object module, boolean is64bit) {
+		SymbolLookup(ProcessAccess access, Object process, Object module, boolean is64bit) {
 			this.access = access;
+			this.process = process;
 			this.module = module;
 			this.is64bit = is64bit;
+			tmp = new Memory(8);
 		}
 
 		long getSymbol(String name) {
 			Pointer ptr = Util.checkNotNull(access.getProcAddress(module, name), name);
-			return is64bit ? ptr.getLong(0) : ptr.getInt(0);
+			Memory tmp = this.tmp;
+			access.readProcessMemory(process, ptr, tmp, is64bit ? 8 : 4);
+			return is64bit ? tmp.getLong(0) : tmp.getInt(0);
 		}
 	}
 }
