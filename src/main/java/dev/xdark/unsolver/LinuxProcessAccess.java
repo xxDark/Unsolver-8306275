@@ -4,7 +4,6 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import com.sun.jna.platform.linux.ErrNo;
 import com.sun.jna.ptr.IntByReference;
 
 import java.io.BufferedReader;
@@ -19,9 +18,7 @@ final class LinuxProcessAccess implements ProcessAccess {
 	@Override
 	public Object openProcess(long pid) {
 		int result = LibC.INSTANCE.ptrace(16 /* PTRACE_ATTACH */, (int) pid, null, null);
-		if (result == -1) {
-			return null;
-		}
+		Util.checkTrue(result != -1, "PTRACE_ATTACH failed");
 		LibC.INSTANCE.waitpid((int) pid, new IntByReference(), 0);
 		return (int) pid;
 	}
@@ -90,7 +87,6 @@ final class LinuxProcessAccess implements ProcessAccess {
 
 		int result = LibC.INSTANCE.process_vm_readv((int) process, new iovec[]{local_iov}, 1, new iovec[]{remote_iov}, 1, 0);
 		if (result == -1) {
-			// Should the caller handle?...
 			throw new IllegalStateException("process_vm_readv failed " + Native.getLastError());
 		}
 		return result;
@@ -108,8 +104,7 @@ final class LinuxProcessAccess implements ProcessAccess {
 
 		int result = LibC.INSTANCE.process_vm_writev((int) process, new iovec[]{local_iov}, 1, new iovec[]{remote_iov}, 1, 0);
 		if (result == -1) {
-			// Should the caller handle?...
-			throw new IllegalStateException("process_vm_writev failed");
+			throw new IllegalStateException("process_vm_writev failed"  + Native.getLastError());
 		}
 		return result;
 	}

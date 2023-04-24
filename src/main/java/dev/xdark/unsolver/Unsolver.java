@@ -20,7 +20,6 @@ public final class Unsolver {
 			access = new LinuxProcessAccess();
 		}
 		Object targetProcess = access.openProcess(pid);
-		Util.checkNotNull(targetProcess, "openProcess failed");
 		Object jvm = null;
 		try {
 			jvm = Util.checkNotNull(access.findLibJvm(targetProcess), "libjvm");
@@ -120,9 +119,7 @@ public final class Unsolver {
 			if (jvm != null) {
 				access.closeLibJvm(jvm);
 			}
-			if (targetProcess != null) {
-				access.closeProcess(targetProcess);
-			}
+			access.closeProcess(targetProcess);
 		}
 		throw new IllegalStateException("Could not change EnableDynamicAgentLoading flag");
 	}
