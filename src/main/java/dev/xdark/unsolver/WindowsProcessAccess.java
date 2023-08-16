@@ -35,7 +35,7 @@ final class WindowsProcessAccess implements ProcessAccess {
 
 	@Override
 	public Object findLibJvm(Object process) {
-		int pointerSize = is64Bit(Kernel32.INSTANCE.GetCurrentProcess()) ? 8 : 4;
+		int pointerSize = Native.POINTER_SIZE;
 		WinDef.HMODULE[] modules = new WinDef.HMODULE[512];
 		IntByReference ref = new IntByReference();
 		Util.checkTrue(Psapi.INSTANCE.EnumProcessModules(
@@ -51,7 +51,9 @@ final class WindowsProcessAccess implements ProcessAccess {
 			Util.checkTrue(len != 0, "GetModuleFileNameExA");
 			String moduleName = new String(pathBuf, 0, len);
 			if (moduleName.contains("jvm.dll")) {
-				return moduleHandle;
+				WinDef.HMODULE lib = Kernel32.INSTANCE.LoadLibraryEx(moduleName, null, 0x00000001 /* DONT_RESOLVE_DLL_REFERENCES */);
+				Util.checkNotNull(lib, "LoadLibraryEx");
+				return new Lib(lib, moduleHandle);
 			}
 		}
 		return null;
@@ -59,13 +61,21 @@ final class WindowsProcessAccess implements ProcessAccess {
 
 	@Override
 	public void closeLibJvm(Object module) {
-		// Do nothing
+		Kernel32.INSTANCE.CloseHandle(((Lib) module).ourHandle);
 	}
 
 	@Override
 	public Pointer getProcAddress(Object module, String name) {
-		WinDef.LPVOID address = Kernel32Ext.INSTANCE.GetProcAddress((WinDef.HMODULE) module, name);
-		return address == null ? null : address.getPointer();
+		Lib lib = (Lib) module;
+		WinDef.LPVOID address = Kernel32Ext.INSTANCE.GetProcAddress(lib.ourHandle, name);
+		if (address == null) {
+			return null;
+		}
+		long raw = Pointer.nativeValue(address.getPointer());
+		long ourBase = Pointer.nativeValue(lib.ourHandle.getPointer());
+		long dstBase = Pointer.nativeValue(lib.theirHandle.getPointer());
+		long result = raw - ourBase + dstBase;
+		return new Pointer(result);
 	}
 
 	@Override
@@ -89,9 +99,19 @@ final class WindowsProcessAccess implements ProcessAccess {
 	}
 
 	public interface Kernel32Ext extends StdCallLibrary {
-		Kernel32Ext INSTANCE = Native.loadLibrary("kernel32",
+		Kernel32Ext INSTANCE = Native.load("kernel32",
 				Kernel32Ext.class, W32APIOptions.ASCII_OPTIONS);
 
 		WinDef.LPVOID GetProcAddress(WinDef.HMODULE hModule, String lpProcName);
+	}
+
+	private static final class Lib {
+		final WinDef.HMODULE ourHandle;
+		final WinDef.HMODULE theirHandle;
+
+		Lib(WinDef.HMODULE ourHandle, WinDef.HMODULE theirHandle) {
+			this.ourHandle = ourHandle;
+			this.theirHandle = theirHandle;
+		}
 	}
 }
